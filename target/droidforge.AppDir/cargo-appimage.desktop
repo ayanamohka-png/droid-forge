@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=droidforge
+Exec=droidforge
+Icon=droidforge
+Type=Application
+Categories=Utility;
+X-AppImage-Version=0.1.0

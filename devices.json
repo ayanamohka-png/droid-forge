@@ -1,0 +1,20 @@
+[
+  {
+    "brand": "Xiaomi",
+    "model": "Redmi 9A",
+    "codename": "dandelion",
+    "soc": "mediatek"
+  },
+  {
+    "brand": "Google",
+    "model": "Pixel 4",
+    "codename": "flame",
+    "soc": "qualcomm"
+  },
+  {
+    "brand": "Xiaomi",
+    "model": "Redmi Note 8",
+    "codename": "ginkgo",
+    "soc": "qualcomm"
+  }
+]
