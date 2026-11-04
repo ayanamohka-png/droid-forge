@@ -10,17 +10,9 @@
 
 Забудьте о командной строке. Устанавливайте APK, делайте скриншоты, прошивайте рекавери и разблокируйте загрузчик в пару кликов.
 
-[Скачать последнюю версию](https://github.com/ayanamohka-png/droidforge/releases) • [Сообщить об ошибке](https://github.com/ayanamohka-png/droidforge/issues)
+[Скачать последнюю версию](https://github.com/ayanamohka-png/droid-forge/releases) • [Сообщить об ошибке](https://github.com/ayanamohka-png/droid-forge/issues)
 
 </div>
-
----
-
-## 📸 Скриншоты
-
-| Вкладка ADB (Установка и файлы) | Вкладка Fastboot (Прошивка) |
-|:---:|:---:|
-| ![ADB](assets/screenshot_adb.png) | ![Fastboot](assets/screenshot_fastboot.png) |
 
 ---
 
