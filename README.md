@@ -10,7 +10,7 @@
 
 Забудьте о командной строке. Устанавливайте APK, делайте скриншоты, прошивайте рекавери и разблокируйте загрузчик в пару кликов.
 
-[Скачать последнюю версию](https://github.com/ТВОЙ_НИК/droidforge/releases) • [Сообщить об ошибке](https://github.com/ТВОЙ_НИК/droidforge/issues)
+[Скачать последнюю версию](https://github.com/ayanamohka-png/droidforge/releases) • [Сообщить об ошибке](https://github.com/ayanamohka-png/droidforge/issues)
 
 </div>
 
