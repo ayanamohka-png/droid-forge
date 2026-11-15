@@ -61,7 +61,7 @@
 
 ```bash
 # 1. Клонируем репозиторий
-git clone https://github.com/ТВОЙ_НИК/droidforge.git
+git clone https://github.com/ayanamohka-png/droidforge.git
 cd droidforge
 
 # 2. Собираем релиз
