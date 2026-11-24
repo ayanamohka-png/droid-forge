@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=DroidForge
+Comment=ADB/Fastboot GUI Tool for Android devices
+Exec=droidforge
+Icon=droidforge
+Terminal=false
+Categories=Development;Utility;
+Keywords=android;adb;fastboot;flash;tool;

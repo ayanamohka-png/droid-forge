@@ -1,0 +1,1155 @@
+import { ScrollView } from "std-widgets.slint";
+import { Md3 } from "theme.slint";
+import {
+    Md3Icon,
+    Md3NavRailItem,
+    Md3IconButton,
+    Md3FilledButton,
+    Md3TonalButton,
+    Md3OutlinedButton,
+    Md3DangerButton,
+    Md3Chip,
+    Md3ToggleChip,
+    Md3TextField,
+    Md3Card,
+    SpecRow
+} from "components.slint";
+import { DevicePhonePreview } from "phone_preview.slint";
+
+export { Md3 }
+
+export component AppWindow inherits Window {
+    title: "DroidForge";
+    preferred-width: 1240px;
+    preferred-height: 820px;
+    min-width: 980px;
+    min-height: 660px;
+    background: Md3.surface;
+    icon: @image-url("../assets/icon-64.png");
+
+    // Навигация и состояние выполнения
+    in-out property <int> active-tab: 0; // 0 = ADB, 1 = Fastboot, 2 = Терминал
+    in-out property <bool> is-busy: false;
+    in-out property <string> busy-label: "";
+
+    // Телеметрия устройства
+    // 0 = Disconnected, 1 = ADB, 2 = Unauthorized, 3 = Recovery, 4 = Sideload, 5 = Fastboot, 6 = Fastbootd
+    in-out property <int> connection-mode: 0;
+    in-out property <bool> adb-ready: false;
+    in-out property <bool> fastboot-ready: false;
+    in-out property <string> device-name: "Нет устройства";
+    in-out property <string> codename: "";
+    in-out property <string> serial: "";
+    in-out property <string> soc: "";
+    in-out property <string> android-version: "";
+    in-out property <string> api-level: "";
+    in-out property <int> battery-percent: -1;
+    in-out property <string> bootloader-version: "";
+    in-out property <string> active-slot: "";
+    in-out property <int> bootloader-state: -1;
+
+    // Поля ADB
+    in-out property <string> apk-path: "";
+    in-out property <bool> apk-downgrade: false;
+    in-out property <bool> apk-grant-perms: false;
+    in-out property <string> sideload-path: "";
+    in-out property <string> package-name: "";
+    in-out property <string> push-local-path: "";
+    in-out property <string> push-remote-path: "/sdcard/Download/";
+    in-out property <string> pull-remote-path: "/sdcard/Download/";
+    in-out property <string> wifi-address: "192.168.1.100:5555";
+
+    // Поля Fastboot
+    in-out property <string> fb-partition: "boot";
+    in-out property <string> fb-image-path: "";
+    in-out property <string> fb-update-zip: "";
+    in-out property <string> fb-getvar-name: "all";
+
+    // Терминал и логи
+    in-out property <string> custom-tool: "adb";
+    in-out property <string> custom-args: "";
+    in-out property <string> log-text: "DroidForge 2.0 готов к работе. Подключите Android-устройство по USB или Wi-Fi.\n";
+    in-out property <string> last-log-line: "Ожидание подключения устройства";
+
+    // Вычисляемые статусы для шапки
+    property <string> mode-label: root.connection-mode == 1 ? "ADB подключён"
+        : (root.connection-mode == 2 ? "Не авторизовано"
+        : (root.connection-mode == 3 ? "Recovery"
+        : (root.connection-mode == 4 ? "ADB Sideload"
+        : (root.connection-mode == 5 ? "Fastboot"
+        : (root.connection-mode == 6 ? "Fastbootd" : "Не подключено")))));
+
+    property <color> badge-bg: (root.connection-mode == 1 || root.connection-mode == 5 || root.connection-mode == 6)
+        ? Md3.success-container
+        : (root.connection-mode == 2
+            ? Md3.warning-container
+            : (root.connection-mode == 3 || root.connection-mode == 4
+                ? Md3.primary-container
+                : Md3.surface-container-high));
+
+    property <color> badge-fg: (root.connection-mode == 1 || root.connection-mode == 5 || root.connection-mode == 6)
+        ? Md3.on-success-container
+        : (root.connection-mode == 2
+            ? Md3.on-warning-container
+            : (root.connection-mode == 3 || root.connection-mode == 4
+                ? Md3.on-primary-container
+                : Md3.on-surface-variant));
+
+    property <color> badge-dot: (root.connection-mode == 1 || root.connection-mode == 5 || root.connection-mode == 6)
+        ? Md3.success
+        : (root.connection-mode == 2
+            ? Md3.warning
+            : (root.connection-mode == 3 || root.connection-mode == 4
+                ? Md3.primary
+                : Md3.on-surface-muted));
+
+    // ─── Коллбэки ───
+    callback refresh-device();
+
+    // ADB
+    callback pick-apk();
+    callback install-apk();
+    callback pick-and-install-split-apk();
+    callback pick-sideload-zip();
+    callback run-sideload();
+    callback list-packages();
+    callback clear-package-data();
+    callback disable-package();
+    callback uninstall-package();
+    callback pick-push-file();
+    callback run-push-file();
+    callback run-pull-file();
+    callback take-screenshot();
+    callback record-screen();
+    callback wifi-tcpip();
+    callback wifi-connect();
+    callback wifi-disconnect();
+    callback adb-device-info();
+    callback save-logcat();
+    callback clear-logcat();
+    callback restart-adb();
+    callback adb-reboot(string);
+    callback adb-power-off();
+
+    // Fastboot
+    callback pick-fb-image();
+    callback flash-partition();
+    callback boot-image();
+    callback flash-vbmeta-no-verity();
+    callback pick-fb-zip();
+    callback run-fb-update();
+    callback set-active-slot(string);
+    callback erase-partition();
+    callback wipe-userdata();
+    callback unlock-bootloader();
+    callback unlock-critical();
+    callback oem-unlock();
+    callback lock-bootloader();
+    callback fb-reboot(string);
+    callback fb-power-off();
+    callback run-getvar();
+
+    // Терминал
+    callback run-custom-command();
+    callback clear-log();
+    callback save-log();
+
+    HorizontalLayout {
+        spacing: 0px;
+
+        // ═══════════════════════════════════════════════════════════
+        // ЛЕВАЯ ПАНЕЛЬ: MD3 NAVIGATION RAIL
+        // ═══════════════════════════════════════════════════════════
+        Rectangle {
+            width: 84px;
+            horizontal-stretch: 0;
+            background: Md3.surface-rail;
+
+            VerticalLayout {
+                padding-top: 16px;
+                padding-bottom: 16px;
+                spacing: 8px;
+                alignment: space-between;
+
+                VerticalLayout {
+                    spacing: 14px;
+                    alignment: start;
+
+                    // Значок приложения
+                    HorizontalLayout {
+                        alignment: center;
+                        Rectangle {
+                            width: 42px;
+                            height: 42px;
+                            border-radius: 14px;
+                            background: Md3.primary-container;
+
+                            Md3Icon {
+                                x: (parent.width - self.width) / 2;
+                                y: (parent.height - self.height) / 2;
+                                icon-size: 22px;
+                                tint: Md3.on-primary-container;
+                                path-data: "M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.29-.15-.65-.06-.83.22l-1.88 3.24a11.463 11.463 0 0 0 -8.94 0L5.65 5.67c-.19-.28-.54-.37-.83-.22-.3.16-.42.54-.26.85l1.84 3.18C4.08 10.97 2.5 13.5 2.5 16.5h19c0-3-1.58-5.53-3.9-7.02zM7 14.5c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm10 0c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z";
+                            }
+                        }
+                    }
+
+                    VerticalLayout {
+                        spacing: 6px;
+
+                        HorizontalLayout {
+                            alignment: center;
+                            Md3NavRailItem {
+                                label: "ADB";
+                                active: root.active-tab == 0;
+                                icon-path: "M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z";
+                                clicked => { root.active-tab = 0; }
+                            }
+                        }
+
+                        HorizontalLayout {
+                            alignment: center;
+                            Md3NavRailItem {
+                                label: "Fastboot";
+                                active: root.active-tab == 1;
+                                icon-path: "M7 2v11h3v9l7-12h-4l4-8z";
+                                clicked => { root.active-tab = 1; }
+                            }
+                        }
+
+                        HorizontalLayout {
+                            alignment: center;
+                            Md3NavRailItem {
+                                label: "Терминал";
+                                active: root.active-tab == 2;
+                                icon-path: "M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8h16v10zm-2-1h-6v-2h6v2zM7.5 17l-1.41-1.41L8.67 13l-2.59-2.59L7.5 9l4 4-4 4z";
+                                clicked => { root.active-tab = 2; }
+                            }
+                        }
+                    }
+                }
+
+                // Нижние действия: переключение темы + обновление устройства
+                VerticalLayout {
+                    spacing: 6px;
+
+                    HorizontalLayout {
+                        alignment: center;
+                        Md3IconButton {
+                            icon-path: Md3.dark
+                                ? "M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 0 0 -1.41 0 .996.996 0 0 0 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 0 0 -1.41 0 .996.996 0 0 0 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0a.996.996 0 0 0 0-1.41l-1.06-1.06zm1.06-10.96a.996.996 0 0 0 0-1.41.996.996 0 0 0 -1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36a.996.996 0 0 0 0-1.41.996.996 0 0 0 -1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"
+                                : "M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1 -4.4 2.26 5.403 5.403 0 0 1 -3.14 -9.8c-.44-.06-.9-.1-1.36-.1z";
+                            clicked => { Md3.dark = !Md3.dark; }
+                        }
+                    }
+
+                    HorizontalLayout {
+                        alignment: center;
+                        Md3IconButton {
+                            enabled: !root.is-busy;
+                            icon-path: "M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z";
+                            clicked => { root.refresh-device(); }
+                        }
+                    }
+
+                    Text {
+                        text: "v2.0";
+                        font-size: 10px;
+                        color: Md3.on-surface-muted;
+                        horizontal-alignment: center;
+                    }
+                }
+            }
+        }
+
+        // Разделитель rail
+        Rectangle {
+            width: 1px;
+            horizontal-stretch: 0;
+            background: Md3.outline-variant;
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // ЦЕНТРАЛЬНАЯ РАБОЧАЯ ОБЛАСТЬ
+        // ═══════════════════════════════════════════════════════════
+        VerticalLayout {
+            horizontal-stretch: 1;
+            spacing: 0px;
+
+            // Верхняя шапка (Google App Bar)
+            Rectangle {
+                height: 64px;
+                vertical-stretch: 0;
+                background: Md3.surface;
+
+                HorizontalLayout {
+                    padding-left: 24px;
+                    padding-right: 24px;
+                    spacing: 12px;
+                    alignment: space-between;
+
+                    HorizontalLayout {
+                        spacing: 12px;
+                        alignment: start;
+
+                        VerticalLayout {
+                            alignment: center;
+                            Text {
+                                text: root.active-tab == 0
+                                    ? "Android Debug Bridge"
+                                    : (root.active-tab == 1 ? "Fastboot и прошивка" : "Терминал и журнал");
+                                font-size: 20px;
+                                font-weight: 600;
+                                color: Md3.on-surface;
+                            }
+                        }
+
+                        // Статус-бейдж подключения
+                        VerticalLayout {
+                            alignment: center;
+                            Rectangle {
+                                height: 28px;
+                                border-radius: 14px;
+                                background: root.badge-bg;
+
+                                HorizontalLayout {
+                                    padding-left: 10px;
+                                    padding-right: 12px;
+                                    spacing: 7px;
+                                    alignment: center;
+
+                                    VerticalLayout {
+                                        alignment: center;
+                                        Rectangle {
+                                            width: 7px;
+                                            height: 7px;
+                                            border-radius: 4px;
+                                            background: root.badge-dot;
+                                        }
+                                    }
+
+                                    Text {
+                                        text: root.mode-label;
+                                        font-size: 12px;
+                                        font-weight: 600;
+                                        color: root.badge-fg;
+                                        vertical-alignment: center;
+                                    }
+                                }
+                            }
+                        }
+
+                        if root.is-busy: VerticalLayout {
+                            alignment: center;
+                            Rectangle {
+                                height: 28px;
+                                border-radius: 14px;
+                                background: Md3.primary-container;
+
+                                HorizontalLayout {
+                                    padding-left: 12px;
+                                    padding-right: 12px;
+                                    alignment: center;
+                                    Text {
+                                        text: root.busy-label != "" ? root.busy-label : "Выполнение…";
+                                        font-size: 12px;
+                                        font-weight: 500;
+                                        color: Md3.on-primary-container;
+                                        vertical-alignment: center;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    VerticalLayout {
+                        alignment: center;
+                        Md3TonalButton {
+                            text: "Обновить";
+                            enabled: !root.is-busy;
+                            icon-path: "M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z";
+                            clicked => { root.refresh-device(); }
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                height: 1px;
+                vertical-stretch: 0;
+                background: Md3.outline-variant;
+            }
+
+            // ───────────────────────────────────────────────────────
+            // ВКЛАДКА 0: ADB
+            // ───────────────────────────────────────────────────────
+            if root.active-tab == 0: ScrollView {
+                vertical-stretch: 1;
+
+                VerticalLayout {
+                    padding: 20px;
+                    spacing: 14px;
+                    alignment: start;
+
+                    // Карточка 1: Установка приложений и Sideload
+                    Md3Card {
+                        title: "Приложения и Sideload";
+                        subtitle: "Установка APK, наборов Split APK и обновлений в режиме Recovery";
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Md3TextField {
+                                text <=> root.apk-path;
+                                placeholder: "Путь к файлу .apk";
+                            }
+                            Md3OutlinedButton {
+                                text: "Выбрать APK";
+                                icon-path: "M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z";
+                                clicked => { root.pick-apk(); }
+                            }
+                            Md3FilledButton {
+                                text: "Установить";
+                                enabled: root.adb-ready && !root.is-busy && root.apk-path != "";
+                                icon-path: "M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z";
+                                clicked => { root.install-apk(); }
+                            }
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: start;
+                            VerticalLayout {
+                                alignment: center;
+                                Md3ToggleChip {
+                                    text: "Откат версии (-d)";
+                                    checked <=> root.apk-downgrade;
+                                }
+                            }
+                            VerticalLayout {
+                                alignment: center;
+                                Md3ToggleChip {
+                                    text: "Выдать права (-g)";
+                                    checked <=> root.apk-grant-perms;
+                                }
+                            }
+                            Md3TonalButton {
+                                text: "Установить Split APK";
+                                enabled: root.adb-ready && !root.is-busy;
+                                clicked => { root.pick-and-install-split-apk(); }
+                            }
+                        }
+
+                        Rectangle { height: 1px; background: Md3.outline-variant; }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Md3TextField {
+                                text <=> root.sideload-path;
+                                placeholder: "Путь к ZIP-архиву для ADB Sideload";
+                            }
+                            Md3OutlinedButton {
+                                text: "Выбрать ZIP";
+                                clicked => { root.pick-sideload-zip(); }
+                            }
+                            Md3TonalButton {
+                                text: "Sideload";
+                                enabled: root.adb-ready && !root.is-busy && root.sideload-path != "";
+                                clicked => { root.run-sideload(); }
+                            }
+                        }
+                    }
+
+                    // Карточка 2: Управление пакетами
+                    Md3Card {
+                        title: "Управление пакетами";
+                        subtitle: "Просмотр сторонних приложений, сброс данных, отключение и удаление";
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Md3TextField {
+                                text <=> root.package-name;
+                                placeholder: "Имя пакета, например com.example.app";
+                            }
+                            Md3TonalButton {
+                                text: "Список (-3)";
+                                enabled: root.adb-ready && !root.is-busy;
+                                clicked => { root.list-packages(); }
+                            }
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: start;
+                            Md3OutlinedButton {
+                                text: "Очистить данные";
+                                enabled: root.adb-ready && !root.is-busy && root.package-name != "";
+                                clicked => { root.clear-package-data(); }
+                            }
+                            Md3OutlinedButton {
+                                text: "Отключить";
+                                enabled: root.adb-ready && !root.is-busy && root.package-name != "";
+                                clicked => { root.disable-package(); }
+                            }
+                            Md3DangerButton {
+                                text: "Удалить пакет";
+                                enabled: root.adb-ready && !root.is-busy && root.package-name != "";
+                                icon-path: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z";
+                                clicked => { root.uninstall-package(); }
+                            }
+                        }
+                    }
+
+                    // Карточка 3: Файлы и экран
+                    Md3Card {
+                        title: "Файлы и захват экрана";
+                        subtitle: "Обмен файлами с памятью устройства, скриншот PNG и запись видео";
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Md3TextField {
+                                text <=> root.push-local-path;
+                                placeholder: "Локальный файл для отправки";
+                            }
+                            Md3OutlinedButton {
+                                text: "Файл";
+                                clicked => { root.pick-push-file(); }
+                            }
+                            Md3TextField {
+                                text <=> root.push-remote-path;
+                                placeholder: "/sdcard/Download/";
+                            }
+                            Md3TonalButton {
+                                text: "Отправить";
+                                enabled: root.adb-ready && !root.is-busy && root.push-local-path != "";
+                                icon-path: "M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z";
+                                clicked => { root.run-push-file(); }
+                            }
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Md3TextField {
+                                text <=> root.pull-remote-path;
+                                placeholder: "Путь на устройстве, например /sdcard/Download/file.zip";
+                            }
+                            Md3OutlinedButton {
+                                text: "Скачать (Pull)";
+                                enabled: root.adb-ready && !root.is-busy && root.pull-remote-path != "";
+                                clicked => { root.run-pull-file(); }
+                            }
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: start;
+                            Md3TonalButton {
+                                text: "Скриншот PNG";
+                                enabled: root.adb-ready && !root.is-busy;
+                                icon-path: "M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z";
+                                clicked => { root.take-screenshot(); }
+                            }
+                            Md3OutlinedButton {
+                                text: "Запись экрана (15 с)";
+                                enabled: root.adb-ready && !root.is-busy;
+                                clicked => { root.record-screen(); }
+                            }
+                        }
+                    }
+
+                    // Карточка 4: Беспроводной ADB и диагностика
+                    Md3Card {
+                        title: "Wi-Fi ADB и диагностика";
+                        subtitle: "Подключение по локальной сети, сведения об устройстве и журнал Logcat";
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Md3TextField {
+                                text <=> root.wifi-address;
+                                placeholder: "192.168.1.100:5555";
+                                accepted => { root.wifi-connect(); }
+                            }
+                            Md3OutlinedButton {
+                                text: "TCP/IP 5555";
+                                enabled: root.adb-ready && !root.is-busy;
+                                clicked => { root.wifi-tcpip(); }
+                            }
+                            Md3FilledButton {
+                                text: "Подключить";
+                                enabled: !root.is-busy && root.wifi-address != "";
+                                icon-path: "M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.237 4.237 0 0 0 -6 0zm-4-4l2 2a7.074 7.074 0 0 1 10 0l2-2C15.14 9.14 8.87 9.14 5 13z";
+                                clicked => { root.wifi-connect(); }
+                            }
+                            Md3OutlinedButton {
+                                text: "Отключить";
+                                enabled: !root.is-busy;
+                                clicked => { root.wifi-disconnect(); }
+                            }
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: start;
+                            Md3TonalButton {
+                                text: "Инфо об устройстве";
+                                enabled: root.adb-ready && !root.is-busy;
+                                clicked => { root.adb-device-info(); }
+                            }
+                            Md3OutlinedButton {
+                                text: "Сохранить Logcat";
+                                enabled: root.adb-ready && !root.is-busy;
+                                clicked => { root.save-logcat(); }
+                            }
+                            Md3OutlinedButton {
+                                text: "Очистить Logcat";
+                                enabled: root.adb-ready && !root.is-busy;
+                                clicked => { root.clear-logcat(); }
+                            }
+                            Md3OutlinedButton {
+                                text: "Перезапуск ADB";
+                                enabled: !root.is-busy;
+                                clicked => { root.restart-adb(); }
+                            }
+                        }
+                    }
+
+                    // Карточка 5: Питание и перезагрузка
+                    Md3Card {
+                        title: "Питание и перезагрузка";
+                        subtitle: "Быстрый переход в загрузчик, Recovery, Fastbootd или EDL";
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: start;
+                            Md3OutlinedButton {
+                                text: "В систему";
+                                enabled: root.adb-ready && !root.is-busy;
+                                clicked => { root.adb-reboot(""); }
+                            }
+                            Md3TonalButton {
+                                text: "В Bootloader";
+                                enabled: root.adb-ready && !root.is-busy;
+                                clicked => { root.adb-reboot("bootloader"); }
+                            }
+                            Md3OutlinedButton {
+                                text: "В Recovery";
+                                enabled: root.adb-ready && !root.is-busy;
+                                clicked => { root.adb-reboot("recovery"); }
+                            }
+                            Md3OutlinedButton {
+                                text: "В Fastbootd";
+                                enabled: root.adb-ready && !root.is-busy;
+                                clicked => { root.adb-reboot("fastboot"); }
+                            }
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: start;
+                            Md3OutlinedButton {
+                                text: "В EDL (9008)";
+                                enabled: root.adb-ready && !root.is-busy;
+                                clicked => { root.adb-reboot("edl"); }
+                            }
+                            Md3DangerButton {
+                                text: "Выключить устройство";
+                                enabled: root.adb-ready && !root.is-busy;
+                                icon-path: "M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42A6.92 6.92 0 0 1 19 12c0 3.87-3.13 7-7 7A6.995 6.995 0 0 1 7.58 6.58L6.17 5.17A8.932 8.932 0 0 0 3 12a9 9 0 0 0 18 0c0-2.74-1.23-5.18-3.17-6.83z";
+                                clicked => { root.adb-power-off(); }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ───────────────────────────────────────────────────────
+            // ВКЛАДКА 1: FASTBOOT
+            // ───────────────────────────────────────────────────────
+            if root.active-tab == 1: ScrollView {
+                vertical-stretch: 1;
+
+                VerticalLayout {
+                    padding: 20px;
+                    spacing: 14px;
+                    alignment: start;
+
+                    // Карточка 1: Прошивка образов
+                    Md3Card {
+                        title: "Прошивка разделов (.img / .zip)";
+                        subtitle: "Выберите целевой раздел, образ диска и выполните запись или разовую загрузку";
+
+                        HorizontalLayout {
+                            spacing: 6px;
+                            alignment: start;
+                            Md3Chip { text: "boot"; selected: root.fb-partition == "boot"; clicked => { root.fb-partition = "boot"; } }
+                            Md3Chip { text: "init_boot"; selected: root.fb-partition == "init_boot"; clicked => { root.fb-partition = "init_boot"; } }
+                            Md3Chip { text: "vendor_boot"; selected: root.fb-partition == "vendor_boot"; clicked => { root.fb-partition = "vendor_boot"; } }
+                            Md3Chip { text: "recovery"; selected: root.fb-partition == "recovery"; clicked => { root.fb-partition = "recovery"; } }
+                            Md3Chip { text: "vbmeta"; selected: root.fb-partition == "vbmeta"; clicked => { root.fb-partition = "vbmeta"; } }
+                            Md3Chip { text: "dtbo"; selected: root.fb-partition == "dtbo"; clicked => { root.fb-partition = "dtbo"; } }
+                            Md3Chip { text: "super"; selected: root.fb-partition == "super"; clicked => { root.fb-partition = "super"; } }
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Md3TextField {
+                                horizontal-stretch: 0;
+                                width: 140px;
+                                text <=> root.fb-partition;
+                                placeholder: "Раздел";
+                            }
+                            Md3TextField {
+                                text <=> root.fb-image-path;
+                                placeholder: "Путь к образу .img или .bin";
+                            }
+                            Md3OutlinedButton {
+                                text: "Выбрать .img";
+                                icon-path: "M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z";
+                                clicked => { root.pick-fb-image(); }
+                            }
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: start;
+                            Md3FilledButton {
+                                text: "Прошить раздел";
+                                enabled: root.fastboot-ready && !root.is-busy && root.fb-image-path != "" && root.fb-partition != "";
+                                icon-path: "M7 2v11h3v9l7-12h-4l4-8z";
+                                clicked => { root.flash-partition(); }
+                            }
+                            Md3TonalButton {
+                                text: "Загрузить (boot)";
+                                enabled: root.fastboot-ready && !root.is-busy && root.fb-image-path != "";
+                                clicked => { root.boot-image(); }
+                            }
+                            Md3OutlinedButton {
+                                text: "vbmeta без verity";
+                                enabled: root.fastboot-ready && !root.is-busy && root.fb-image-path != "";
+                                clicked => { root.flash-vbmeta-no-verity(); }
+                            }
+                        }
+
+                        Rectangle { height: 1px; background: Md3.outline-variant; }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Md3TextField {
+                                text <=> root.fb-update-zip;
+                                placeholder: "Образ factory update (.zip) для fastboot update";
+                            }
+                            Md3OutlinedButton {
+                                text: "Выбрать ZIP";
+                                clicked => { root.pick-fb-zip(); }
+                            }
+                            Md3TonalButton {
+                                text: "Обновить (update)";
+                                enabled: root.fastboot-ready && !root.is-busy && root.fb-update-zip != "";
+                                clicked => { root.run-fb-update(); }
+                            }
+                        }
+                    }
+
+                    // Карточка 2: Слоты A/B и стирание разделов
+                    Md3Card {
+                        title: "Слоты A/B и стирание";
+                        subtitle: "Переключение активного загрузочного слота и очистка разделов";
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: start;
+                            Md3TonalButton {
+                                text: "Активный слот A";
+                                enabled: root.fastboot-ready && !root.is-busy;
+                                clicked => { root.set-active-slot("a"); }
+                            }
+                            Md3TonalButton {
+                                text: "Активный слот B";
+                                enabled: root.fastboot-ready && !root.is-busy;
+                                clicked => { root.set-active-slot("b"); }
+                            }
+                            Md3DangerButton {
+                                text: "Стереть раздел";
+                                enabled: root.fastboot-ready && !root.is-busy && root.fb-partition != "";
+                                icon-path: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z";
+                                clicked => { root.erase-partition(); }
+                            }
+                            Md3DangerButton {
+                                text: "Сброс данных (-w)";
+                                enabled: root.fastboot-ready && !root.is-busy;
+                                clicked => { root.wipe-userdata(); }
+                            }
+                        }
+                    }
+
+                    // Карточка 3: Загрузчик (Bootloader)
+                    Md3Card {
+                        title: "Управление загрузчиком (Bootloader)";
+                        subtitle: "Разблокировка и блокировка загрузчика стирают пользовательские данные";
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: start;
+                            Md3DangerButton {
+                                text: "Flashing Unlock";
+                                enabled: root.fastboot-ready && !root.is-busy;
+                                icon-path: "M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z";
+                                clicked => { root.unlock-bootloader(); }
+                            }
+                            Md3OutlinedButton {
+                                text: "Unlock Critical";
+                                enabled: root.fastboot-ready && !root.is-busy;
+                                clicked => { root.unlock-critical(); }
+                            }
+                            Md3OutlinedButton {
+                                text: "OEM Unlock";
+                                enabled: root.fastboot-ready && !root.is-busy;
+                                clicked => { root.oem-unlock(); }
+                            }
+                            Md3OutlinedButton {
+                                text: "Заблокировать (Lock)";
+                                enabled: root.fastboot-ready && !root.is-busy;
+                                icon-path: "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z";
+                                clicked => { root.lock-bootloader(); }
+                            }
+                        }
+                    }
+
+                    // Карточка 4: Переменные загрузчика (getvar)
+                    Md3Card {
+                        title: "Переменные загрузчика (getvar)";
+                        subtitle: "Быстрое чтение параметров загрузчика и диагностика";
+
+                        HorizontalLayout {
+                            spacing: 6px;
+                            alignment: start;
+                            Md3Chip { text: "all"; selected: root.fb-getvar-name == "all"; clicked => { root.fb-getvar-name = "all"; } }
+                            Md3Chip { text: "product"; selected: root.fb-getvar-name == "product"; clicked => { root.fb-getvar-name = "product"; } }
+                            Md3Chip { text: "current-slot"; selected: root.fb-getvar-name == "current-slot"; clicked => { root.fb-getvar-name = "current-slot"; } }
+                            Md3Chip { text: "unlocked"; selected: root.fb-getvar-name == "unlocked"; clicked => { root.fb-getvar-name = "unlocked"; } }
+                            Md3Chip { text: "version-bootloader"; selected: root.fb-getvar-name == "version-bootloader"; clicked => { root.fb-getvar-name = "version-bootloader"; } }
+                            Md3Chip { text: "is-userspace"; selected: root.fb-getvar-name == "is-userspace"; clicked => { root.fb-getvar-name = "is-userspace"; } }
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Md3TextField {
+                                text <=> root.fb-getvar-name;
+                                placeholder: "Имя переменной (например all, anti, max-download-size)";
+                                accepted => { root.run-getvar(); }
+                            }
+                            Md3TonalButton {
+                                text: "Получить getvar";
+                                enabled: root.fastboot-ready && !root.is-busy;
+                                clicked => { root.run-getvar(); }
+                            }
+                        }
+                    }
+
+                    // Карточка 5: Перезагрузка из Fastboot
+                    Md3Card {
+                        title: "Перезагрузка Fastboot";
+                        subtitle: "Выход в систему или переключение между режимами загрузчика";
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: start;
+                            Md3FilledButton {
+                                text: "В систему";
+                                enabled: root.fastboot-ready && !root.is-busy;
+                                clicked => { root.fb-reboot(""); }
+                            }
+                            Md3TonalButton {
+                                text: "В Bootloader";
+                                enabled: root.fastboot-ready && !root.is-busy;
+                                clicked => { root.fb-reboot("bootloader"); }
+                            }
+                            Md3OutlinedButton {
+                                text: "В Fastbootd";
+                                enabled: root.fastboot-ready && !root.is-busy;
+                                clicked => { root.fb-reboot("fastboot"); }
+                            }
+                            Md3OutlinedButton {
+                                text: "В Recovery";
+                                enabled: root.fastboot-ready && !root.is-busy;
+                                clicked => { root.fb-reboot("recovery"); }
+                            }
+                            Md3DangerButton {
+                                text: "Выключить";
+                                enabled: root.fastboot-ready && !root.is-busy;
+                                clicked => { root.fb-power-off(); }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ───────────────────────────────────────────────────────
+            // ВКЛАДКА 2: ТЕРМИНАЛ И ПРОИЗВОЛЬНЫЕ КОМАНДЫ
+            // ───────────────────────────────────────────────────────
+            if root.active-tab == 2: VerticalLayout {
+                vertical-stretch: 1;
+                padding: 20px;
+                spacing: 14px;
+
+                Md3Card {
+                    title: "Выполнение команды";
+                    subtitle: "Введите аргументы напрямую для adb или fastboot";
+
+                    HorizontalLayout {
+                        spacing: 8px;
+
+                        VerticalLayout {
+                            alignment: center;
+                            Md3Chip {
+                                text: "adb";
+                                selected: root.custom-tool == "adb";
+                                clicked => { root.custom-tool = "adb"; }
+                            }
+                        }
+                        VerticalLayout {
+                            alignment: center;
+                            Md3Chip {
+                                text: "fastboot";
+                                selected: root.custom-tool == "fastboot";
+                                clicked => { root.custom-tool = "fastboot"; }
+                            }
+                        }
+
+                        Md3TextField {
+                            text <=> root.custom-args;
+                            placeholder: root.custom-tool == "adb"
+                                ? "например: shell wm size"
+                                : "например: getvar max-download-size";
+                            accepted => { root.run-custom-command(); }
+                        }
+
+                        Md3FilledButton {
+                            text: "Выполнить";
+                            enabled: !root.is-busy && root.custom-args != "";
+                            icon-path: "M8 5v14l11-7z";
+                            clicked => { root.run-custom-command(); }
+                        }
+                    }
+                }
+
+                // Область вывода лога
+                Rectangle {
+                    vertical-stretch: 1;
+                    border-radius: 16px;
+                    background: Md3.terminal-bg;
+                    border-width: 1px;
+                    border-color: Md3.outline-variant;
+                    clip: true;
+
+                    VerticalLayout {
+                        spacing: 0px;
+
+                        Rectangle {
+                            height: 44px;
+                            vertical-stretch: 0;
+                            background: #1A1E28;
+
+                            HorizontalLayout {
+                                padding-left: 16px;
+                                padding-right: 12px;
+                                alignment: space-between;
+
+                                Text {
+                                    text: "Журнал операций";
+                                    font-size: 12px;
+                                    font-weight: 600;
+                                    color: #CBD5E1;
+                                    vertical-alignment: center;
+                                }
+
+                                HorizontalLayout {
+                                    spacing: 8px;
+                                    alignment: end;
+
+                                    VerticalLayout {
+                                        alignment: center;
+                                        Md3Chip {
+                                            text: "Сохранить .txt";
+                                            clicked => { root.save-log(); }
+                                        }
+                                    }
+                                    VerticalLayout {
+                                        alignment: center;
+                                        Md3Chip {
+                                            text: "Очистить";
+                                            clicked => { root.clear-log(); }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        ScrollView {
+                            vertical-stretch: 1;
+
+                            VerticalLayout {
+                                padding: 14px;
+                                TextInput {
+                                    text: root.log-text;
+                                    read-only: true;
+                                    single-line: false;
+                                    wrap: word-wrap;
+                                    font-family: "Consolas";
+                                    font-size: 12px;
+                                    color: Md3.terminal-text;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Компактная строка последнего события (на вкладках ADB / Fastboot)
+            if root.active-tab != 2: Rectangle {
+                height: 1px;
+                vertical-stretch: 0;
+                background: Md3.outline-variant;
+            }
+
+            if root.active-tab != 2: Rectangle {
+                height: 40px;
+                vertical-stretch: 0;
+                background: Md3.surface-container-low;
+
+                HorizontalLayout {
+                    padding-left: 20px;
+                    padding-right: 14px;
+                    spacing: 12px;
+                    alignment: space-between;
+
+                    Text {
+                        text: root.last-log-line;
+                        font-size: 12px;
+                        color: Md3.on-surface-variant;
+                        vertical-alignment: center;
+                        overflow: elide;
+                        horizontal-stretch: 1;
+                    }
+
+                    VerticalLayout {
+                        alignment: center;
+                        Md3Chip {
+                            text: "Открыть терминал";
+                            clicked => { root.active-tab = 2; }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // ПРАВАЯ ПАНЕЛЬ: ЖИВОЙ ПРЕДПРОСМОТР ТЕЛЕФОНА И ИНСПЕКТОР
+        // ═══════════════════════════════════════════════════════════
+        if root.active-tab != 2: Rectangle {
+            width: 1px;
+            horizontal-stretch: 0;
+            background: Md3.outline-variant;
+        }
+
+        if root.active-tab != 2: Rectangle {
+            width: 296px;
+            horizontal-stretch: 0;
+            background: Md3.surface-container-low;
+
+            ScrollView {
+                VerticalLayout {
+                    padding: 18px;
+                    spacing: 16px;
+                    alignment: start;
+
+                    VerticalLayout {
+                        spacing: 2px;
+                        Text {
+                            text: "Устройство";
+                            font-size: 14px;
+                            font-weight: 600;
+                            color: Md3.on-surface;
+                        }
+                        Text {
+                            text: root.connection-mode == 5 || root.connection-mode == 6
+                                ? "Активен режим загрузчика"
+                                : (root.active-tab == 1 && root.connection-mode == 0
+                                    ? "Предпросмотр режима Fastboot"
+                                    : root.device-name);
+                            font-size: 12px;
+                            color: Md3.on-surface-variant;
+                            overflow: elide;
+                        }
+                    }
+
+                    // Графическое отображение телефона (в Fastboot / ADB / Recovery)
+                    HorizontalLayout {
+                        alignment: center;
+                        DevicePhonePreview {
+                            connection-mode: root.connection-mode;
+                            fastboot-tab-active: root.active-tab == 1;
+                            is-busy: root.is-busy;
+                            device-name: root.device-name;
+                            codename: root.codename;
+                            serial: root.serial;
+                            android-version: root.android-version;
+                            api-level: root.api-level;
+                            battery-percent: root.battery-percent;
+                            bootloader-version: root.bootloader-version;
+                            active-slot: root.active-slot;
+                            bootloader-state: root.bootloader-state;
+                        }
+                    }
+
+                    // Карточка технических характеристик
+                    Rectangle {
+                        border-radius: 14px;
+                        background: Md3.surface-container;
+                        border-width: 1px;
+                        border-color: Md3.outline-variant;
+
+                        VerticalLayout {
+                            padding: 14px;
+                            spacing: 8px;
+
+                            SpecRow {
+                                label: "Модель";
+                                value: root.device-name;
+                            }
+                            SpecRow {
+                                label: "Код";
+                                value: root.codename;
+                            }
+                            SpecRow {
+                                label: "Платформа";
+                                value: root.soc;
+                            }
+                            SpecRow {
+                                label: "Режим";
+                                value: root.mode-label;
+                                value-color: root.badge-dot;
+                            }
+                            SpecRow {
+                                label: "Слот";
+                                value: root.active-slot;
+                            }
+                            SpecRow {
+                                label: "Загрузчик";
+                                value: root.bootloader-state == 1
+                                    ? "Unlocked"
+                                    : (root.bootloader-state == 0 ? "Locked" : "");
+                                value-color: root.bootloader-state == 1
+                                    ? Md3.warning
+                                    : (root.bootloader-state == 0 ? Md3.success : Md3.on-surface);
+                            }
+                            SpecRow {
+                                label: "Серийный";
+                                value: root.serial;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

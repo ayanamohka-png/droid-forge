@@ -1,0 +1,494 @@
+import { Md3 } from "theme.slint";
+
+// Material Symbols vector icon (24x24 viewbox)
+export component Md3Icon inherits Rectangle {
+    in property <string> path-data;
+    in property <color> tint: Md3.on-surface-variant;
+    in property <length> icon-size: 20px;
+
+    width: icon-size;
+    height: icon-size;
+    background: transparent;
+
+    Path {
+        width: 100%;
+        height: 100%;
+        viewbox-x: 0;
+        viewbox-y: 0;
+        viewbox-width: 24;
+        viewbox-height: 24;
+        fill: root.tint;
+        commands: root.path-data;
+    }
+}
+
+// MD3 Navigation Rail Item (56x32 pill indicator)
+export component Md3NavRailItem inherits Rectangle {
+    in property <string> label;
+    in property <string> icon-path;
+    in property <bool> active: false;
+    callback clicked();
+
+    width: 72px;
+    height: 60px;
+    background: transparent;
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 4px;
+
+        HorizontalLayout {
+            alignment: center;
+            Rectangle {
+                width: 56px;
+                height: 32px;
+                border-radius: 16px;
+                background: root.active
+                    ? Md3.secondary-container
+                    : (ta.has-hover ? Md3.hover-tint : transparent);
+                animate background { duration: 140ms; }
+
+                Md3Icon {
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    path-data: root.icon-path;
+                    icon-size: 20px;
+                    tint: root.active ? Md3.on-secondary-container : Md3.on-surface-variant;
+                }
+            }
+        }
+
+        Text {
+            text: root.label;
+            font-size: 11px;
+            font-weight: root.active ? 600 : 500;
+            color: root.active ? Md3.on-surface : Md3.on-surface-variant;
+            horizontal-alignment: center;
+        }
+    }
+}
+
+// MD3 Icon Button (40x40 circle)
+export component Md3IconButton inherits Rectangle {
+    in property <string> icon-path;
+    in property <bool> enabled: true;
+    in property <color> tint: Md3.on-surface-variant;
+    callback clicked();
+
+    width: 40px;
+    height: 40px;
+    horizontal-stretch: 0;
+    border-radius: 20px;
+    background: !root.enabled
+        ? transparent
+        : (ta.pressed ? Md3.pressed-tint : (ta.has-hover ? Md3.hover-tint : transparent));
+    animate background { duration: 120ms; }
+
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => { root.clicked(); }
+    }
+
+    Md3Icon {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        path-data: root.icon-path;
+        icon-size: 20px;
+        tint: root.enabled ? root.tint : Md3.on-surface-muted;
+    }
+}
+
+// MD3 Filled Button (Primary Google Blue)
+export component Md3FilledButton inherits Rectangle {
+    in property <string> text;
+    in property <string> icon-path: "";
+    in property <bool> enabled: true;
+    callback clicked();
+
+    height: 38px;
+    min-width: 84px;
+    horizontal-stretch: 0;
+    border-radius: 19px;
+    background: !root.enabled
+        ? Md3.surface-container-high
+        : (ta.pressed ? Md3.primary-hover : (ta.has-hover ? Md3.primary-hover : Md3.primary));
+    animate background { duration: 120ms; }
+
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => { root.clicked(); }
+    }
+
+    HorizontalLayout {
+        padding-left: root.icon-path != "" ? 14px : 18px;
+        padding-right: 18px;
+        spacing: 7px;
+        alignment: center;
+
+        if root.icon-path != "": VerticalLayout {
+            alignment: center;
+            Md3Icon {
+                path-data: root.icon-path;
+                icon-size: 17px;
+                tint: root.enabled ? Md3.on-primary : Md3.on-surface-muted;
+            }
+        }
+
+        Text {
+            text: root.text;
+            font-size: 13px;
+            font-weight: 600;
+            color: root.enabled ? Md3.on-primary : Md3.on-surface-muted;
+            vertical-alignment: center;
+        }
+    }
+}
+
+// MD3 Filled Tonal Button
+export component Md3TonalButton inherits Rectangle {
+    in property <string> text;
+    in property <string> icon-path: "";
+    in property <bool> enabled: true;
+    callback clicked();
+
+    height: 38px;
+    min-width: 80px;
+    horizontal-stretch: 0;
+    border-radius: 19px;
+    background: !root.enabled
+        ? Md3.surface-container-high
+        : (ta.has-hover ? Md3.tonal-hover : Md3.tonal-bg);
+    animate background { duration: 120ms; }
+
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => { root.clicked(); }
+    }
+
+    HorizontalLayout {
+        padding-left: root.icon-path != "" ? 14px : 16px;
+        padding-right: 16px;
+        spacing: 7px;
+        alignment: center;
+
+        if root.icon-path != "": VerticalLayout {
+            alignment: center;
+            Md3Icon {
+                path-data: root.icon-path;
+                icon-size: 17px;
+                tint: root.enabled ? Md3.on-tonal : Md3.on-surface-muted;
+            }
+        }
+
+        Text {
+            text: root.text;
+            font-size: 13px;
+            font-weight: 600;
+            color: root.enabled ? Md3.on-tonal : Md3.on-surface-muted;
+            vertical-alignment: center;
+        }
+    }
+}
+
+// MD3 Outlined Button
+export component Md3OutlinedButton inherits Rectangle {
+    in property <string> text;
+    in property <string> icon-path: "";
+    in property <bool> enabled: true;
+    callback clicked();
+
+    height: 38px;
+    min-width: 76px;
+    horizontal-stretch: 0;
+    border-radius: 19px;
+    border-width: 1px;
+    border-color: root.enabled ? Md3.outline-variant : Md3.surface-container-high;
+    background: !root.enabled
+        ? transparent
+        : (ta.pressed ? Md3.pressed-tint : (ta.has-hover ? Md3.hover-tint : transparent));
+    animate background { duration: 120ms; }
+
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => { root.clicked(); }
+    }
+
+    HorizontalLayout {
+        padding-left: root.icon-path != "" ? 13px : 16px;
+        padding-right: 16px;
+        spacing: 7px;
+        alignment: center;
+
+        if root.icon-path != "": VerticalLayout {
+            alignment: center;
+            Md3Icon {
+                path-data: root.icon-path;
+                icon-size: 17px;
+                tint: root.enabled ? Md3.primary : Md3.on-surface-muted;
+            }
+        }
+
+        Text {
+            text: root.text;
+            font-size: 13px;
+            font-weight: 500;
+            color: root.enabled ? Md3.on-surface : Md3.on-surface-muted;
+            vertical-alignment: center;
+        }
+    }
+}
+
+// MD3 Danger Tonal Button (for Erase / Wipe / Unlock / Lock)
+export component Md3DangerButton inherits Rectangle {
+    in property <string> text;
+    in property <string> icon-path: "";
+    in property <bool> enabled: true;
+    callback clicked();
+
+    height: 38px;
+    min-width: 80px;
+    horizontal-stretch: 0;
+    border-radius: 19px;
+    background: !root.enabled
+        ? Md3.surface-container-high
+        : (ta.has-hover ? Md3.error-hover : Md3.error-container);
+    animate background { duration: 120ms; }
+
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => { root.clicked(); }
+    }
+
+    HorizontalLayout {
+        padding-left: root.icon-path != "" ? 13px : 16px;
+        padding-right: 16px;
+        spacing: 7px;
+        alignment: center;
+
+        if root.icon-path != "": VerticalLayout {
+            alignment: center;
+            Md3Icon {
+                path-data: root.icon-path;
+                icon-size: 17px;
+                tint: root.enabled ? Md3.on-error-container : Md3.on-surface-muted;
+            }
+        }
+
+        Text {
+            text: root.text;
+            font-size: 13px;
+            font-weight: 600;
+            color: root.enabled ? Md3.on-error-container : Md3.on-surface-muted;
+            vertical-alignment: center;
+        }
+    }
+}
+
+// MD3 Filter / Assist Chip
+export component Md3Chip inherits Rectangle {
+    in property <string> text;
+    in property <bool> selected: false;
+    in property <bool> enabled: true;
+    callback clicked();
+
+    height: 30px;
+    horizontal-stretch: 0;
+    border-radius: 8px;
+    border-width: root.selected ? 0px : 1px;
+    border-color: Md3.outline-variant;
+    background: root.selected
+        ? Md3.secondary-container
+        : (ta.has-hover && root.enabled ? Md3.hover-tint : Md3.surface-container);
+    animate background { duration: 120ms; }
+
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => { root.clicked(); }
+    }
+
+    HorizontalLayout {
+        padding-left: 11px;
+        padding-right: 11px;
+        alignment: center;
+        Text {
+            text: root.text;
+            font-size: 12px;
+            font-weight: root.selected ? 600 : 500;
+            color: !root.enabled
+                ? Md3.on-surface-muted
+                : (root.selected ? Md3.on-secondary-container : Md3.on-surface-variant);
+            vertical-alignment: center;
+        }
+    }
+}
+
+// MD3 Compact Switch Toggle
+export component Md3ToggleChip inherits Rectangle {
+    in property <string> text;
+    in-out property <bool> checked: false;
+
+    height: 30px;
+    horizontal-stretch: 0;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: root.checked ? Md3.primary : Md3.outline-variant;
+    background: root.checked ? Md3.primary-container : transparent;
+    animate background { duration: 120ms; }
+
+    TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.checked = !root.checked; }
+    }
+
+    HorizontalLayout {
+        padding-left: 9px;
+        padding-right: 11px;
+        spacing: 6px;
+        alignment: center;
+
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 14px;
+                height: 14px;
+                border-radius: 4px;
+                border-width: 1.5px;
+                border-color: root.checked ? Md3.primary : Md3.outline;
+                background: root.checked ? Md3.primary : transparent;
+
+                if root.checked: Md3Icon {
+                    x: 1px;
+                    y: 1px;
+                    icon-size: 12px;
+                    tint: Md3.on-primary;
+                    path-data: "M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z";
+                }
+            }
+        }
+
+        Text {
+            text: root.text;
+            font-size: 12px;
+            font-weight: 500;
+            color: root.checked ? Md3.on-primary-container : Md3.on-surface-variant;
+            vertical-alignment: center;
+        }
+    }
+}
+
+// MD3 Outlined Input Field
+export component Md3TextField inherits Rectangle {
+    in-out property <string> text;
+    in property <string> placeholder: "";
+    callback accepted();
+
+    height: 38px;
+    horizontal-stretch: 1;
+    border-radius: 10px;
+    border-width: input.has-focus ? 1.5px : 1px;
+    border-color: input.has-focus ? Md3.primary : Md3.outline-variant;
+    background: Md3.surface-container-low;
+    clip: true;
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+
+        Rectangle {
+            horizontal-stretch: 1;
+            background: transparent;
+
+            if root.text == "": Text {
+                width: 100%;
+                height: 100%;
+                text: root.placeholder;
+                color: Md3.on-surface-muted;
+                font-size: 13px;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+
+            input := TextInput {
+                width: 100%;
+                height: 100%;
+                text <=> root.text;
+                color: Md3.on-surface;
+                font-size: 13px;
+                single-line: true;
+                vertical-alignment: center;
+                accepted => { root.accepted(); }
+            }
+        }
+    }
+}
+
+// MD3 Surface Card Container
+export component Md3Card inherits Rectangle {
+    in property <string> title;
+    in property <string> subtitle: "";
+
+    border-radius: 16px;
+    background: Md3.surface-container;
+    border-width: 1px;
+    border-color: Md3.outline-variant;
+
+    VerticalLayout {
+        padding: 18px;
+        spacing: 12px;
+
+        if root.title != "": VerticalLayout {
+            spacing: 2px;
+            Text {
+                text: root.title;
+                font-size: 14px;
+                font-weight: 600;
+                color: Md3.on-surface;
+            }
+            if root.subtitle != "": Text {
+                text: root.subtitle;
+                font-size: 12px;
+                color: Md3.on-surface-variant;
+            }
+        }
+
+        @children
+    }
+}
+
+// Key-value spec row for the Device Inspector sidebar
+export component SpecRow inherits HorizontalLayout {
+    in property <string> label;
+    in property <string> value;
+    in property <color> value-color: Md3.on-surface;
+
+    spacing: 8px;
+    alignment: space-between;
+
+    Text {
+        text: root.label;
+        font-size: 12px;
+        color: Md3.on-surface-variant;
+        horizontal-stretch: 0;
+    }
+
+    Text {
+        text: root.value != "" ? root.value : "—";
+        font-size: 12px;
+        font-weight: 500;
+        color: root.value != "" ? root.value-color : Md3.on-surface-muted;
+        horizontal-alignment: right;
+        overflow: elide;
+        horizontal-stretch: 1;
+    }
+}

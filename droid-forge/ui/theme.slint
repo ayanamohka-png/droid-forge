@@ -1,0 +1,58 @@
+// Google Material Design 3 design tokens for DroidForge (Light & Dark)
+
+export global Md3 {
+    in-out property <bool> dark: false;
+
+    // Surface hierarchy (MD3 Tonal Elevation)
+    out property <color> surface:               dark ? #111318 : #F8F9FA;
+    out property <color> surface-container-low: dark ? #181B21 : #F1F3F6;
+    out property <color> surface-container:     dark ? #1E2128 : #FFFFFF;
+    out property <color> surface-container-high:dark ? #282C35 : #E9EEF6;
+    out property <color> surface-rail:          dark ? #161920 : #F0F4F9;
+
+    // Text & Icons
+    out property <color> on-surface:            dark ? #E3E6EC : #1F1F1F;
+    out property <color> on-surface-variant:    dark ? #A5ACB8 : #444746;
+    out property <color> on-surface-muted:      dark ? #7A818E : #747775;
+
+    // Outlines
+    out property <color> outline:               dark ? #4A505C : #747775;
+    out property <color> outline-variant:       dark ? #2F3440 : #DDE3EA;
+
+    // Primary (Google Blue MD3)
+    out property <color> primary:               dark ? #A8C7FA : #0B57D0;
+    out property <color> primary-hover:         dark ? #BDD5FC : #0842A0;
+    out property <color> on-primary:            dark ? #062E6F : #FFFFFF;
+    out property <color> primary-container:     dark ? #0842A0 : #D3E3FD;
+    out property <color> on-primary-container:  dark ? #D3E3FD : #041E49;
+
+    // Secondary (Navigation Rail indicator / Tonal buttons)
+    out property <color> secondary-container:   dark ? #004A77 : #C2E7FF;
+    out property <color> on-secondary-container:dark ? #C2E7FF : #001D35;
+    out property <color> tonal-bg:              dark ? #252A34 : #E8F0FE;
+    out property <color> tonal-hover:           dark ? #303644 : #D3E3FD;
+    out property <color> on-tonal:              dark ? #D3E3FD : #0B57D0;
+
+    // Semantic statuses (Google Green / Amber / Red)
+    out property <color> success:               dark ? #6DD58C : #146C2E;
+    out property <color> success-container:     dark ? #0F5223 : #C4EED0;
+    out property <color> on-success-container:  dark ? #C4EED0 : #072711;
+
+    out property <color> warning:               dark ? #F5B841 : #8A5300;
+    out property <color> warning-container:     dark ? #4A3000 : #FEF0C7;
+    out property <color> on-warning-container:  dark ? #FDE68A : #452900;
+
+    out property <color> error:                 dark ? #F2B8B5 : #B3261E;
+    out property <color> error-container:       dark ? #601410 : #F9DEDC;
+    out property <color> error-hover:           dark ? #7A1A15 : #F2CFCB;
+    out property <color> on-error-container:    dark ? #F9DEDC : #410E0B;
+
+    // Interactive hover overlays
+    out property <color> hover-tint:            dark ? #FFFFFF12 : #1F1F1F0D;
+    out property <color> pressed-tint:          dark ? #FFFFFF1F : #1F1F1F18;
+
+    // Terminal surface
+    out property <color> terminal-bg:           dark ? #0C0E13 : #14171F;
+    out property <color> terminal-text:         #DCE2EE;
+    out property <color> terminal-muted:        #8B94A6;
+}

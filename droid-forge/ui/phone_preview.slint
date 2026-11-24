@@ -1,0 +1,416 @@
+import { Md3 } from "theme.slint";
+import { Md3Icon } from "components.slint";
+
+// Реалистичное отображение смартфона с живым экраном Fastboot / ADB / Recovery
+export component DevicePhonePreview inherits Rectangle {
+    // 0 = Disconnected, 1 = ADB, 2 = Unauthorized, 3 = Recovery, 4 = Sideload, 5 = Fastboot, 6 = Fastbootd
+    in property <int> connection-mode: 0;
+    in property <bool> fastboot-tab-active: false;
+    in property <bool> is-busy: false;
+    in property <string> device-name: "Нет устройства";
+    in property <string> codename: "";
+    in property <string> serial: "";
+    in property <string> android-version: "";
+    in property <string> api-level: "";
+    in property <int> battery-percent: -1;
+    in property <string> bootloader-version: "";
+    in property <string> active-slot: "";
+    // -1 = unknown, 0 = locked, 1 = unlocked
+    in property <int> bootloader-state: -1;
+
+    property <bool> is-fastboot-live: root.connection-mode == 5 || root.connection-mode == 6;
+    property <bool> show-fastboot-screen: root.is-fastboot-live || (root.connection-mode == 0 && root.fastboot-tab-active);
+
+    width: 214px;
+    height: 378px;
+    background: transparent;
+
+    // Боковая кнопка питания (справа)
+    Rectangle {
+        x: 204px;
+        y: 86px;
+        width: 4px;
+        height: 32px;
+        border-radius: 2px;
+        background: root.is-fastboot-live ? #3DDC84 : #5A606B;
+    }
+
+    // Боковая качелька громкости (справа)
+    Rectangle {
+        x: 204px;
+        y: 132px;
+        width: 4px;
+        height: 58px;
+        border-radius: 2px;
+        background: #5A606B;
+    }
+
+    // Внешний корпус смартфона (титаново-графитовая рамка)
+    Rectangle {
+        x: 6px;
+        y: 4px;
+        width: 198px;
+        height: 370px;
+        border-radius: 30px;
+        background: #23272F;
+        border-width: 2px;
+        border-color: Md3.dark ? #3E4451 : #4B5260;
+
+        // Внутренний экран
+        Rectangle {
+            x: 7px;
+            y: 7px;
+            width: parent.width - 14px;
+            height: parent.height - 14px;
+            border-radius: 23px;
+            clip: true;
+            background: root.show-fastboot-screen
+                ? #090B0E
+                : (root.connection-mode == 1
+                    ? (Md3.dark ? #161E2E : #EDF4FF)
+                    : #101319);
+
+            // Камера punch-hole сверху по центру
+            Rectangle {
+                x: (parent.width - self.width) / 2;
+                y: 8px;
+                width: 9px;
+                height: 9px;
+                border-radius: 5px;
+                background: #050608;
+                border-width: 1px;
+                border-color: #262A34;
+                z: 10;
+            }
+
+            // ══════════════════════════════════════════════════
+            // ЭКРАН 1: FASTBOOT / BOOTLOADER (живой и standby)
+            // ══════════════════════════════════════════════════
+            if root.show-fastboot-screen: VerticalLayout {
+                width: 100%;
+                height: 100%;
+                padding-top: 26px;
+                padding-left: 12px;
+                padding-right: 10px;
+                padding-bottom: 12px;
+                spacing: 8px;
+
+                // Классическая стрелка "START ▸" на уровне физической кнопки питания
+                HorizontalLayout {
+                    alignment: end;
+                    padding-top: 46px;
+
+                    Rectangle {
+                        height: 24px;
+                        border-radius: 4px;
+                        background: root.is-fastboot-live ? #143D29 : #1C2028;
+                        border-width: 1px;
+                        border-color: root.is-fastboot-live ? #3DDC84 : #3A404D;
+
+                        HorizontalLayout {
+                            padding-left: 8px;
+                            padding-right: 6px;
+                            spacing: 4px;
+                            alignment: center;
+
+                            Text {
+                                text: root.connection-mode == 6 ? "FASTBOOTD" : "START";
+                                font-size: 10px;
+                                font-weight: 700;
+                                letter-spacing: 0.6px;
+                                color: root.is-fastboot-live ? #3DDC84 : #8B93A3;
+                                vertical-alignment: center;
+                            }
+                            Text {
+                                text: "▸";
+                                font-size: 11px;
+                                color: root.is-fastboot-live ? #3DDC84 : #8B93A3;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+
+                Text {
+                    text: root.is-fastboot-live
+                        ? "Press power key to select"
+                        : "Ожидание режима Fastboot";
+                    font-size: 9px;
+                    color: #6B7280;
+                    horizontal-alignment: center;
+                }
+
+                // Силуэт Android Bugdroid (Fastboot Maintenance)
+                HorizontalLayout {
+                    alignment: center;
+                    padding-top: 4px;
+                    padding-bottom: 4px;
+
+                    Rectangle {
+                        width: 78px;
+                        height: 78px;
+                        border-radius: 16px;
+                        background: root.is-fastboot-live ? #102019 : #13161D;
+                        border-width: 1px;
+                        border-color: root.is-fastboot-live ? #1E4D36 : #232833;
+
+                        Path {
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                            width: 50px;
+                            height: 50px;
+                            viewbox-x: 0;
+                            viewbox-y: 0;
+                            viewbox-width: 24;
+                            viewbox-height: 24;
+                            fill: root.is-fastboot-live ? #3DDC84 : #596070;
+                            commands: "M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.29-.15-.65-.06-.83.22l-1.88 3.24a11.463 11.463 0 0 0 -8.94 0L5.65 5.67c-.19-.28-.54-.37-.83-.22-.3.16-.42.54-.26.85l1.84 3.18C4.08 10.97 2.5 13.5 2.5 16.5h19c0-3-1.58-5.53-3.9-7.02zM7 14.5c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm10 0c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z";
+                        }
+
+                        Rectangle {
+                            x: parent.width - 14px;
+                            y: 8px;
+                            width: 6px;
+                            height: 6px;
+                            border-radius: 3px;
+                            background: root.is-fastboot-live
+                                ? (root.bootloader-state == 1 ? #F59E0B : #3DDC84)
+                                : #4B5563;
+                        }
+                    }
+                }
+
+                Text {
+                    text: root.connection-mode == 6
+                        ? "FASTBOOTD"
+                        : "FASTBOOT MODE";
+                    font-size: 11px;
+                    font-weight: 700;
+                    letter-spacing: 0.8px;
+                    color: root.is-fastboot-live
+                        ? (root.bootloader-state == 1 ? #F59E0B : #3DDC84)
+                        : #7C8496;
+                    horizontal-alignment: center;
+                }
+
+                // Живая телеметрия загрузчика на экране телефона
+                Rectangle {
+                    vertical-stretch: 1;
+                    border-radius: 8px;
+                    background: #0F1218;
+                    border-width: 1px;
+                    border-color: #1F2430;
+
+                    VerticalLayout {
+                        padding: 8px;
+                        spacing: 3px;
+
+                        Text {
+                            text: "PRODUCT: " + (root.codename != "" ? root.codename : "—");
+                            font-size: 9px;
+                            color: #CBD5E1;
+                            overflow: elide;
+                        }
+                        Text {
+                            text: "BL: " + (root.bootloader-version != "" ? root.bootloader-version : "—");
+                            font-size: 9px;
+                            color: #94A3B8;
+                            overflow: elide;
+                        }
+                        Text {
+                            text: "SLOT: " + (root.active-slot != "" ? root.active-slot : "—");
+                            font-size: 9px;
+                            color: #94A3B8;
+                            overflow: elide;
+                        }
+                        Text {
+                            text: "STATE: " + (root.bootloader-state == 1
+                                ? "unlocked"
+                                : (root.bootloader-state == 0 ? "locked" : "—"));
+                            font-size: 9px;
+                            font-weight: 600;
+                            color: root.bootloader-state == 1
+                                ? #F59E0B
+                                : (root.bootloader-state == 0 ? #3DDC84 : #94A3B8);
+                            overflow: elide;
+                        }
+                        Text {
+                            text: "SN: " + (root.serial != "" ? root.serial : "—");
+                            font-size: 9px;
+                            color: #64748B;
+                            overflow: elide;
+                        }
+                    }
+                }
+
+                if root.is-busy: Rectangle {
+                    height: 4px;
+                    border-radius: 2px;
+                    background: #1E3A5F;
+                    Rectangle {
+                        width: 65%;
+                        height: 100%;
+                        border-radius: 2px;
+                        background: #60A5FA;
+                    }
+                }
+            }
+
+            // ══════════════════════════════════════════════════
+            // ЭКРАН 2: ADB ПОДКЛЮЧЁН (Material You)
+            // ══════════════════════════════════════════════════
+            if !root.show-fastboot-screen && root.connection-mode == 1: VerticalLayout {
+                width: 100%;
+                height: 100%;
+                padding-top: 26px;
+                padding-left: 14px;
+                padding-right: 14px;
+                padding-bottom: 14px;
+                spacing: 12px;
+
+                HorizontalLayout {
+                    alignment: space-between;
+                    Text {
+                        text: "ADB";
+                        font-size: 10px;
+                        font-weight: 700;
+                        color: Md3.primary;
+                    }
+                    Text {
+                        text: root.battery-percent >= 0 ? root.battery-percent + "%" : "USB";
+                        font-size: 10px;
+                        font-weight: 600;
+                        color: Md3.on-surface-variant;
+                    }
+                }
+
+                Rectangle { vertical-stretch: 1; background: transparent; }
+
+                HorizontalLayout {
+                    alignment: center;
+                    Rectangle {
+                        width: 60px;
+                        height: 60px;
+                        border-radius: 30px;
+                        background: Md3.success-container;
+
+                        Md3Icon {
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                            icon-size: 28px;
+                            tint: Md3.success;
+                            path-data: "M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z";
+                        }
+                    }
+                }
+
+                VerticalLayout {
+                    spacing: 4px;
+                    Text {
+                        text: root.device-name;
+                        font-size: 13px;
+                        font-weight: 600;
+                        color: Md3.on-surface;
+                        horizontal-alignment: center;
+                        wrap: word-wrap;
+                    }
+                    Text {
+                        text: root.android-version != ""
+                            ? "Android " + root.android-version + (root.api-level != "" ? " (API " + root.api-level + ")" : "")
+                            : "Отладка по USB активна";
+                        font-size: 10px;
+                        color: Md3.on-surface-variant;
+                        horizontal-alignment: center;
+                    }
+                }
+
+                if root.battery-percent >= 0: VerticalLayout {
+                    spacing: 4px;
+                    padding-top: 6px;
+                    Rectangle {
+                        height: 6px;
+                        border-radius: 3px;
+                        background: Md3.outline-variant;
+                        Rectangle {
+                            width: parent.width * root.battery-percent / 100;
+                            height: 100%;
+                            border-radius: 3px;
+                            background: root.battery-percent <= 20 ? Md3.error : Md3.success;
+                        }
+                    }
+                }
+
+                Rectangle { vertical-stretch: 1; background: transparent; }
+
+                HorizontalLayout {
+                    alignment: center;
+                    Rectangle {
+                        width: 56px;
+                        height: 4px;
+                        border-radius: 2px;
+                        background: Md3.outline-variant;
+                    }
+                }
+            }
+
+            // ══════════════════════════════════════════════════
+            // ЭКРАН 3: RECOVERY / SIDELOAD / UNAUTHORIZED / ОЖИДАНИЕ
+            // ══════════════════════════════════════════════════
+            if !root.show-fastboot-screen && root.connection-mode != 1: VerticalLayout {
+                width: 100%;
+                height: 100%;
+                padding: 18px;
+                alignment: center;
+                spacing: 12px;
+
+                HorizontalLayout {
+                    alignment: center;
+                    Rectangle {
+                        width: 56px;
+                        height: 56px;
+                        border-radius: 28px;
+                        background: root.connection-mode == 2
+                            ? #3B270A
+                            : (root.connection-mode == 3 || root.connection-mode == 4 ? #0D2D4D : #1A1E26);
+
+                        Md3Icon {
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                            icon-size: 26px;
+                            tint: root.connection-mode == 2
+                                ? #F59E0B
+                                : (root.connection-mode == 3 || root.connection-mode == 4 ? #60A5FA : #6B7280);
+                            path-data: root.connection-mode == 2
+                                ? "M12 2L1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2v-4z"
+                                : "M15 7v4h1v2h-3V5h2l-3-4-3 4h2v8H8v-2.07c.7-.37 1.2-1.08 1.2-1.93 0-1.21-.99-2.2-2.2-2.2S4.8 7.79 4.8 9c0 .85.5 1.56 1.2 1.93V13c0 1.11.89 2 2 2h3v3.05c-.71.37-1.2 1.1-1.2 1.95 0 1.22.99 2.2 2.2 2.2s2.2-.98 2.2-2.2c0-.85-.49-1.58-1.2-1.95V15h3c1.11 0 2-.89 2-2v-2h1V7h-4z";
+                        }
+                    }
+                }
+
+                Text {
+                    text: root.connection-mode == 2
+                        ? "Подтвердите USB"
+                        : (root.connection-mode == 3
+                            ? "Recovery Mode"
+                            : (root.connection-mode == 4 ? "ADB Sideload" : "Нет устройства"));
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: #E2E8F0;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: root.connection-mode == 2
+                        ? "Нажмите «Разрешить» на экране телефона"
+                        : (root.connection-mode == 3 || root.connection-mode == 4
+                            ? "Готов к установке ZIP через Sideload"
+                            : "Подключите Android по USB и нажмите «Обновить»");
+                    font-size: 10px;
+                    color: #8B93A3;
+                    horizontal-alignment: center;
+                    wrap: word-wrap;
+                }
+            }
+        }
+    }
+}
